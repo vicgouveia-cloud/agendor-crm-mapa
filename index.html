@@ -154,23 +154,61 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      z-index: 500;
+      z-index: 1100;
       transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       box-shadow: 2px 0 8px rgba(0,0,0,0.04);
       flex-shrink: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
+    /* Top Sticky Bar on Mobile */
+    .mobile-back-bar {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 1200;
+      background: #0f1c3f;
+      color: white;
+      padding: 10px 14px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .mobile-back-bar span {
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-return-map {
+      background: #0086ff;
+      color: white;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+
+    .btn-return-map:active {
+      background: #0068cc;
+      transform: scale(0.97);
+    }
+
+    /* Filters Section - Scrolls naturally with content */
     .sidebar-header {
       padding: 12px 14px;
       border-bottom: 1px solid var(--border);
       background: #fafbfc;
-      position: sticky;
-      top: 0;
-      z-index: 600;
-    }
-
-    .mobile-back-bar {
-      display: none;
     }
 
     .search-box {
@@ -308,10 +346,7 @@
 
     /* List Results */
     .company-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px 14px;
-      -webkit-overflow-scrolling: touch;
+      padding: 10px 14px 40px 14px;
     }
 
     .company-card {
@@ -386,17 +421,30 @@
       gap: 4px;
     }
 
-    /* Map Area */
+    /* Map Area & Leaflet Z-Index Containment */
     .map-wrapper {
       flex: 1;
       position: relative;
       height: 100%;
       width: 100%;
+      z-index: 100;
     }
 
     #map {
       width: 100%;
       height: 100%;
+      z-index: 100;
+    }
+
+    /* Garante que os controles nativos do Leaflet NUNCA fiquem por cima dos painéis e gavetas */
+    .leaflet-pane {
+      z-index: 200 !important;
+    }
+    .leaflet-top, .leaflet-bottom {
+      z-index: 300 !important;
+    }
+    .leaflet-control {
+      z-index: 300 !important;
     }
 
     .viewport-indicator {
@@ -430,7 +478,7 @@
       bottom: max(16px, env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
-      z-index: 800;
+      z-index: 500;
       gap: 8px;
       background: rgba(15, 28, 63, 0.95);
       padding: 6px 10px;
@@ -468,7 +516,7 @@
       background: white;
       box-shadow: var(--shadow-lg);
       border-left: 1px solid var(--border);
-      z-index: 900;
+      z-index: 2000;
       transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
@@ -887,7 +935,7 @@
       height: 100dvh;
       background: rgba(15, 23, 42, 0.6);
       backdrop-filter: blur(2px);
-      z-index: 2000;
+      z-index: 3000;
       display: none;
       align-items: center;
       justify-content: center;
@@ -1088,7 +1136,7 @@
       font-size: 0.85rem;
       font-weight: 600;
       box-shadow: var(--shadow-lg);
-      z-index: 3000;
+      z-index: 4000;
       transition: transform 0.3s ease;
       display: flex;
       align-items: center;
@@ -1147,14 +1195,14 @@
         height: calc(100dvh - var(--header-h));
       }
 
-      /* Sidebar vira um painel deslizante com header fixo */
+      /* Sidebar vira um painel deslizante em tela cheia */
       .sidebar {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 750;
+        z-index: 1500;
         transform: translateY(100%);
         border-right: none;
         box-shadow: none;
@@ -1165,43 +1213,15 @@
         transform: translateY(0);
       }
 
-      /* Barra de topo do painel mobile sempre fixa e visível */
+      /* A barra de topo no mobile é a ÚNICA coisa fixa no topo */
       .mobile-back-bar {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #0f1c3f;
-        color: white;
-        padding: 10px 12px;
-        margin: -12px -14px 10px -14px;
       }
 
-      .mobile-back-bar span {
-        font-size: 0.9rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .btn-return-map {
-        background: #0086ff;
-        color: white;
-        border: none;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.8rem;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      }
-
-      .btn-return-map:active {
-        background: #0068cc;
-        transform: scale(0.97);
+      /* Os filtros rolam para cima naturalmente com o scroll dos cards! */
+      .sidebar-header {
+        padding: 10px 14px;
+        background: #f8fafc;
       }
 
       .filter-grid {
@@ -1228,7 +1248,7 @@
       .detail-drawer {
         width: 100%;
         right: -100%;
-        z-index: 1500;
+        z-index: 2000;
       }
 
       .drawer-company-name {
@@ -1247,6 +1267,7 @@
       /* Modal de edição toma a tela toda */
       .modal-overlay {
         padding: 0;
+        z-index: 3000;
       }
 
       .modal-card {
@@ -1300,16 +1321,16 @@
     
     <!-- Sidebar / Filters & List -->
     <aside class="sidebar" id="appSidebar">
-      <div class="sidebar-header">
-        
-        <!-- Mobile Sticky Return Bar -->
-        <div class="mobile-back-bar">
-          <span><i class="fa-solid fa-filter"></i> Filtros & Lista</span>
-          <button class="btn-return-map" id="btnReturnMap">
-            <i class="fa-solid fa-arrow-left"></i> Voltar ao Mapa
-          </button>
-        </div>
+      
+      <!-- Mobile Sticky Return Bar (Única barra fixa no topo do painel mobile) -->
+      <div class="mobile-back-bar">
+        <span><i class="fa-solid fa-sliders"></i> Filtros & Lista</span>
+        <button class="btn-return-map" id="btnReturnMap">
+          <i class="fa-solid fa-arrow-left"></i> Voltar ao Mapa
+        </button>
+      </div>
 
+      <div class="sidebar-header">
         <!-- Search input -->
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
