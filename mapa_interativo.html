@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agendor CRM - Mapa Interativo com Google Maps</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --primary: #0086ff;
+      --primary-dark: #0068cc;
+      --primary-light: #e6f3ff;
+      --secondary: #00b894;
+      --secondary-dark: #009879;
+      --warning: #fdcb6e;
+      --danger: #e17055;
+      --dark: #0f172a;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --white: #ffffff;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navbar */
+    header {
+      background: #0f1c3f;
+      color: white;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 1000;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-logo {
+      background: linear-gradient(135deg, #0086ff, #00d2d3);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .top-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-right: 10px;
+    }
+
+    .top-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .top-stat-item strong {
+      color: white;
+      font-weight: 700;
+    }
+
+    .btn-top {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      color: white;
+    }
+
+    .btn-save-export { background: #00b894; }
+    .btn-save-export:hover { background: #009879; }
+
+    /* Main Container */
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 56px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sidebar / Filters */
+    .sidebar {
+      width: 420px;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      z-index: 500;
+      transition: all 0.3s ease;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 134, 255, 0.15);
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      letter-spacing: 0.3px;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.78rem;
+      background: white;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filter-group select:focus {
+      border-color: var(--primary);
+    }
+
+    .filter-toggles {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-item input {
+      cursor: pointer;
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .btn-reset {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-reset:hover {
+      color: var(--danger);
+    }
+
+    .counter-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      background: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* List Results */
+    .company-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+    }
+
+    .company-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .company-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 134, 255, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .company-card.active {
+      border-color: var(--primary);
+      background: #f0f7ff;
+    }
+
+    .card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge-primary { background: #e0f2fe; color: #0284c7; }
+    .badge-secondary { background: #dcfce7; color: #16a34a; }
+    .badge-edited { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-gps { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .badge-no-gps { background: #fef2f2; color: #dc2626; }
+
+    .card-info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .card-info-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Map Area */
+    .map-wrapper {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Offcanvas Detail Drawer */
+    .detail-drawer {
+      position: absolute;
+      top: 0;
+      right: -540px;
+      width: 530px;
+      height: 100%;
+      background: white;
+      box-shadow: var(--shadow-lg);
+      border-left: 1px solid var(--border);
+      z-index: 600;
+      transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      background: #0f1c3f;
+      color: white;
+      padding: 16px 18px;
+      position: relative;
+    }
+
+    .drawer-top-btns {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-drawer-action {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-drawer-action:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .btn-drawer-edit {
+      background: #0086ff;
+    }
+    .btn-drawer-edit:hover {
+      background: #006fcc;
+    }
+
+    .drawer-company-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 3px;
+      padding-right: 120px;
+    }
+
+    .drawer-company-sub {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .drawer-quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: white;
+      transition: all 0.2s;
+    }
+
+    .btn-whatsapp { background: #25D366; }
+    .btn-whatsapp:hover { background: #20ba5a; }
+    .btn-phone { background: #0086ff; }
+    .btn-phone:hover { background: #006fcc; }
+    .btn-maps { background: #ea4335; }
+    .btn-maps:hover { background: #c5392d; }
+
+    /* Drawer Tabs */
+    .drawer-tabs {
+      display: flex;
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--border);
+      padding: 0 8px;
+      overflow-x: auto;
+    }
+
+    .drawer-tab {
+      padding: 9px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .drawer-tab:hover {
+      color: var(--text);
+    }
+
+    .drawer-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: white;
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Details Rows */
+    .info-section {
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .info-cell {
+      background: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .info-cell.full-width {
+      grid-column: span 2;
+    }
+
+    .info-label {
+      font-size: 0.66rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--dark);
+      word-break: break-word;
+    }
+
+    /* Add Note Box in History Tab */
+    .add-note-card {
+      background: #f0f7ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .add-note-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .add-note-input {
+      width: 100%;
+      height: 70px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      outline: none;
+      margin-bottom: 8px;
+      resize: vertical;
+      background: white;
+    }
+
+    .add-note-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-add-note {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      float: right;
+    }
+    .btn-add-note:hover { background: var(--primary-dark); }
+
+    /* People Card */
+    .person-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+
+    .person-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .person-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .person-role {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Deals Card */
+    .deal-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .deal-card.ganho { border-left-color: var(--secondary); }
+    .deal-card.perdido { border-left-color: var(--danger); }
+
+    /* Timeline Comments */
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -20px;
+      top: 4px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 0.72rem;
+    }
+
+    .timeline-user {
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .timeline-date {
+      color: var(--text-muted);
+    }
+
+    .timeline-text {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      color: #334155;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    /* Tasks */
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+
+    .task-checkbox {
+      margin-top: 3px;
+    }
+
+    .task-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .task-date {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 24px 10px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .empty-state i {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+
+    /* Custom Pin */
+    .custom-pin {
+      width: 26px;
+      height: 26px;
+      border-radius: 50% 50% 50% 0;
+      background: #0086ff;
+      position: absolute;
+      transform: rotate(-45deg);
+      left: 50%;
+      top: 50%;
+      margin: -13px 0 0 -13px;
+      border: 2px solid white;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .custom-pin-inner {
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      transform: rotate(45deg);
+    }
+
+    /* Modal de Edição Completa */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: white;
+      width: 680px;
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalIn 0.2s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      background: #0f1c3f;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .form-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--primary-dark);
+      margin: 12px 0 8px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-field label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .form-field input, .form-field select, .form-field textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      color: var(--text);
+    }
+
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .geocode-box {
+      background: #f0f7ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .btn-geocode {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-geocode:hover { background: var(--primary-dark); }
+
+    .modal-footer {
+      background: #fafbfc;
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn-modal {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-modal-cancel {
+      background: #e2e8f0;
+      color: #475569;
+    }
+    .btn-modal-cancel:hover { background: #cbd5e1; }
+
+    .btn-modal-save {
+      background: #00b894;
+      color: white;
+    }
+    .btn-modal-save:hover { background: #009879; }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      z-index: 3000;
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">A</div>
+      <span>Agendor CRM • Mapa Interativo</span>
+    </div>
+    
+    <div class="top-actions">
+      <div class="top-stats">
+        <div class="top-stat-item"><i class="fa-solid fa-building"></i> <span id="stat-total-emp">0</span> Empresas</div>
+        <div class="top-stat-item"><i class="fa-solid fa-location-dot"></i> <span id="stat-total-gps">0</span> no Mapa</div>
+        <div class="top-stat-item"><i class="fa-solid fa-pen-to-square" style="color:#fdcb6e"></i> <span id="stat-total-edit">0</span> Editadas</div>
+      </div>
+      
+      <button class="btn-top btn-save-export" id="btnExportChanges" title="Baixar arquivo com as alterações salvas">
+        <i class="fa-solid fa-download"></i> Baixar Dados Atualizados
+      </button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    
+    <!-- Sidebar / Filters & List -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        
+        <!-- Search input -->
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="Buscar por empresa, CNPJ, contato, cidade..." />
+        </div>
+
+        <!-- Filter Dropdowns -->
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Estado (UF)</label>
+            <select id="filterUf">
+              <option value="">Todos os Estados</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Categoria</label>
+            <select id="filterCat">
+              <option value="">Todas Categorias</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Setor</label>
+            <select id="filterSetor">
+              <option value="">Todos os Setores</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Responsável</label>
+            <select id="filterResp">
+              <option value="">Todos</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="filter-toggles">
+          <label class="toggle-item">
+            <input type="checkbox" id="chkOnlyGps" checked>
+            <span>Mostrar apenas com localização no mapa</span>
+          </label>
+          <label class="toggle-item">
+            <input type="checkbox" id="chkHasHistory">
+            <span>Apenas com histórico / anotações</span>
+          </label>
+          <label class="toggle-item">
+            <input type="checkbox" id="chkHasDeals">
+            <span>Apenas com negócios / oportunidades</span>
+          </label>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="filter-actions">
+          <span class="counter-badge" id="listCounter">0 empresas encontradas</span>
+          <button class="btn-reset" id="btnResetFilters">
+            <i class="fa-solid fa-rotate-left"></i> Limpar filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Companies List -->
+      <div class="company-list" id="companyList">
+        <!-- Rendered via JS -->
+      </div>
+    </aside>
+
+    <!-- Map View -->
+    <main class="map-wrapper">
+      <div id="map"></div>
+    </main>
+
+    <!-- Agendor Details Offcanvas Drawer -->
+    <div class="detail-drawer" id="detailDrawer">
+      <div class="drawer-header">
+        <div class="drawer-top-btns">
+          <button class="btn-drawer-action btn-drawer-edit" id="btnOpenEditModal">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </button>
+          <button class="btn-drawer-action" id="btnCloseDrawer"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="drawer-company-name" id="drawerName">Nome da Empresa</div>
+        <div class="drawer-company-sub" id="drawerSub">Razão Social • CNPJ</div>
+        
+        <div class="drawer-quick-actions" id="drawerQuickActions">
+          <!-- Action Buttons injected dynamically -->
+        </div>
+      </div>
+
+      <!-- Drawer Tabs -->
+      <div class="drawer-tabs">
+        <button class="drawer-tab active" data-tab="tab-geral"><i class="fa-solid fa-id-card"></i> Visão Geral</button>
+        <button class="drawer-tab" data-tab="tab-pessoas"><i class="fa-solid fa-user-group"></i> Contatos (<span id="tabCountPessoas">0</span>)</button>
+        <button class="drawer-tab" data-tab="tab-negocios"><i class="fa-solid fa-briefcase"></i> Negócios (<span id="tabCountNegocios">0</span>)</button>
+        <button class="drawer-tab" data-tab="tab-historico"><i class="fa-solid fa-clock-rotate-left"></i> Histórico (<span id="tabCountHistorico">0</span>)</button>
+        <button class="drawer-tab" data-tab="tab-tarefas"><i class="fa-solid fa-calendar-check"></i> Tarefas (<span id="tabCountTarefas">0</span>)</button>
+      </div>
+
+      <!-- Drawer Body -->
+      <div class="drawer-body">
+        
+        <!-- Tab 1: Visão Geral -->
+        <div class="tab-content active" id="tab-geral">
+          <div class="info-section">
+            <div class="section-title"><i class="fa-solid fa-info-circle"></i> Informações Cadastrais</div>
+            <div class="info-grid">
+              <div class="info-cell full-width">
+                <div class="info-label">Nome Fantasia</div>
+                <div class="info-value" id="d_fantasia">-</div>
+              </div>
+              <div class="info-cell full-width">
+                <div class="info-label">Razão Social</div>
+                <div class="info-value" id="d_razao">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">CNPJ</div>
+                <div class="info-value" id="d_cnpj">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Responsável</div>
+                <div class="info-value" id="d_responsavel">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Setor</div>
+                <div class="info-value" id="d_setor">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Categoria</div>
+                <div class="info-value" id="d_categoria">-</div>
+              </div>
+              <div class="info-cell full-width">
+                <div class="info-label">Website</div>
+                <div class="info-value" id="d_website">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="section-title"><i class="fa-solid fa-phone"></i> Telefones e Comunicação</div>
+            <div class="info-grid">
+              <div class="info-cell">
+                <div class="info-label">Telefone Principal</div>
+                <div class="info-value" id="d_tel">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Celular / WhatsApp</div>
+                <div class="info-value" id="d_cel">-</div>
+              </div>
+              <div class="info-cell full-width">
+                <div class="info-label">E-mail</div>
+                <div class="info-value" id="d_email">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="section-title"><i class="fa-solid fa-location-dot"></i> Localização & Endereço</div>
+            <div class="info-grid">
+              <div class="info-cell full-width">
+                <div class="info-label">Endereço Completo</div>
+                <div class="info-value" id="d_endereco">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Bairro</div>
+                <div class="info-value" id="d_bairro">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Cidade / UF</div>
+                <div class="info-value" id="d_cidade_uf">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">CEP</div>
+                <div class="info-value" id="d_cep">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">GPS Coordenadas</div>
+                <div class="info-value" id="d_gps">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section" id="sectionDescricao">
+            <div class="section-title"><i class="fa-solid fa-align-left"></i> Descrição / Observações</div>
+            <div class="info-cell full-width">
+              <div class="info-value" id="d_descricao" style="font-weight: 400; font-size: 0.82rem; line-height: 1.5;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Pessoas & Contatos -->
+        <div class="tab-content" id="tab-pessoas">
+          <div id="pessoasContainer"></div>
+        </div>
+
+        <!-- Tab 3: Negócios & Oportunidades -->
+        <div class="tab-content" id="tab-negocios">
+          <div id="negociosContainer"></div>
+        </div>
+
+        <!-- Tab 4: Histórico & Comentários -->
+        <div class="tab-content" id="tab-historico">
+          <div class="add-note-card">
+            <div class="add-note-title"><i class="fa-solid fa-pen"></i> Nova Anotação no Histórico</div>
+            <textarea class="add-note-input" id="inputNewNote" placeholder="Escreva uma anotação, registro de ligação, visita ou observação..."></textarea>
+            <div style="overflow: hidden;">
+              <button class="btn-add-note" id="btnAddNote"><i class="fa-solid fa-plus"></i> Salvar Anotação</button>
+            </div>
+          </div>
+
+          <div class="timeline" id="historicoContainer"></div>
+        </div>
+
+        <!-- Tab 5: Tarefas & Agendamentos -->
+        <div class="tab-content" id="tab-tarefas">
+          <div id="tarefasContainer"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal de Edição da Empresa -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square"></i> Editar Dados da Empresa</h3>
+        <button class="modal-close" id="btnCloseModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editCompanyForm">
+          <input type="hidden" id="edit_id" />
+
+          <div class="form-section-title"><i class="fa-solid fa-building"></i> Dados Cadastrais</div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>Nome Fantasia</label>
+              <input type="text" id="edit_nome_fantasia" required />
+            </div>
+            <div class="form-field">
+              <label>Razão Social</label>
+              <input type="text" id="edit_razao_social" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label>CNPJ</label>
+              <input type="text" id="edit_cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+            <div class="form-field">
+              <label>Setor</label>
+              <input type="text" id="edit_setor" list="listSetores" />
+              <datalist id="listSetores"></datalist>
+            </div>
+            <div class="form-field">
+              <label>Categoria</label>
+              <input type="text" id="edit_categoria" list="listCategorias" />
+              <datalist id="listCategorias"></datalist>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>Responsável</label>
+              <input type="text" id="edit_responsavel" list="listResponsaveis" />
+              <datalist id="listResponsaveis"></datalist>
+            </div>
+            <div class="form-field">
+              <label>Website</label>
+              <input type="text" id="edit_website" placeholder="www.exemplo.com.br" />
+            </div>
+          </div>
+
+          <div class="form-section-title"><i class="fa-solid fa-phone"></i> Telefones e E-mail</div>
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label>Telefone</label>
+              <input type="text" id="edit_telefone" placeholder="(11) 3333-0000" />
+            </div>
+            <div class="form-field">
+              <label>Celular</label>
+              <input type="text" id="edit_celular" placeholder="(11) 99999-0000" />
+            </div>
+            <div class="form-field">
+              <label>WhatsApp (somente números)</label>
+              <input type="text" id="edit_whatsapp_num" placeholder="5511999990000" />
+            </div>
+          </div>
+          <div class="form-field full">
+            <label>E-mail</label>
+            <input type="email" id="edit_email" placeholder="contato@empresa.com.br" />
+          </div>
+
+          <div class="form-section-title"><i class="fa-solid fa-location-dot"></i> Endereço & Localização no Mapa</div>
+          <div class="form-grid-4">
+            <div class="form-field">
+              <label>Logradouro / Rua</label>
+              <input type="text" id="edit_rua" />
+            </div>
+            <div class="form-field">
+              <label>Número</label>
+              <input type="text" id="edit_numero" />
+            </div>
+            <div class="form-field">
+              <label>Complemento</label>
+              <input type="text" id="edit_complemento" />
+            </div>
+            <div class="form-field">
+              <label>Bairro</label>
+              <input type="text" id="edit_bairro" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label>Cidade</label>
+              <input type="text" id="edit_cidade" />
+            </div>
+            <div class="form-field">
+              <label>Estado (UF)</label>
+              <input type="text" id="edit_estado" maxlength="2" style="text-transform: uppercase;" />
+            </div>
+            <div class="form-field">
+              <label>CEP</label>
+              <input type="text" id="edit_cep" placeholder="00000-000" />
+            </div>
+          </div>
+
+          <div class="geocode-box">
+            <div style="font-size:0.75rem; color:#0369a1;">
+              <strong><i class="fa-solid fa-wand-magic-sparkles"></i> Buscar GPS:</strong> Localize as coordenadas latitude/longitude automaticamente pelo endereço preenchido acima.
+            </div>
+            <button type="button" class="btn-geocode" id="btnGeocodeAddress">
+              <i class="fa-solid fa-map-pin"></i> Obter Coordenadas
+            </button>
+          </div>
+
+          <div class="form-grid-2" style="margin-top:8px;">
+            <div class="form-field">
+              <label>Latitude (GPS)</label>
+              <input type="number" step="any" id="edit_lat" placeholder="-23.550520" />
+            </div>
+            <div class="form-field">
+              <label>Longitude (GPS)</label>
+              <input type="number" step="any" id="edit_lng" placeholder="-46.633308" />
+            </div>
+          </div>
+
+          <div class="form-section-title"><i class="fa-solid fa-align-left"></i> Observações / Descrição</div>
+          <div class="form-field full">
+            <textarea id="edit_descricao" rows="3" placeholder="Informações adicionais da empresa..."></textarea>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-modal btn-modal-cancel" id="btnCancelEdit">Cancelar</button>
+        <button class="btn-modal btn-modal-save" id="btnSaveCompany"><i class="fa-solid fa-check"></i> Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toastMessage"><i class="fa-solid fa-circle-check"></i> <span>Alteração salva com sucesso!</span></div>
+
+  <!-- Leaflet & MarkerCluster Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  
+  <!-- Consolidated Local Agendor Data -->
+  <script src="dados_mapa.js"></script>
+
+  <script>
+    // App State
+    let map;
+    let markerClusterGroup;
+    let markersMap = new Map();
+    let allEmpresas = [];
+    let filteredEmpresas = [];
+    let currentSelectedEmpId = null;
+    const STORAGE_KEY = "AGENDOR_CRM_EDITS_CACHE_V1";
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!window.AGENDOR_DATA) {
+        alert("Erro: Arquivo dados_mapa.js não foi encontrado!");
+        return;
+      }
+
+      allEmpresas = window.AGENDOR_DATA.empresas;
+      loadSavedEdits();
+
+      updateGlobalStats();
+      initMap();
+      populateDropdowns();
+      setupEventListeners();
+      applyFilters();
+    });
+
+    function loadSavedEdits() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const editsMap = JSON.parse(saved);
+          allEmpresas.forEach((e, idx) => {
+            if (editsMap[e.id]) {
+              allEmpresas[idx] = Object.assign({}, e, editsMap[e.id], { is_edited: true });
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar edições locais:", err);
+      }
+    }
+
+    function saveEditsToStorage(empId, updatedEmp) {
+      try {
+        let editsMap = {};
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) editsMap = JSON.parse(saved);
+        
+        editsMap[empId] = updatedEmp;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(editsMap));
+      } catch (err) {
+        console.error("Erro ao salvar no storage:", err);
+      }
+    }
+
+    function updateGlobalStats() {
+      const totalEmp = allEmpresas.length;
+      const totalGps = allEmpresas.filter(e => e.has_gps).length;
+      const totalEdited = allEmpresas.filter(e => e.is_edited).length;
+
+      document.getElementById('stat-total-emp').innerText = totalEmp.toLocaleString('pt-BR');
+      document.getElementById('stat-total-gps').innerText = totalGps.toLocaleString('pt-BR');
+      document.getElementById('stat-total-edit').innerText = totalEdited.toLocaleString('pt-BR');
+    }
+
+    function initMap() {
+      // Cria o mapa base
+      map = L.map('map', {
+        zoomControl: true
+      }).setView([-23.5505, -46.6333], 7);
+
+      // Camada 1: Google Maps - Ruas / Padrão (Sem mensagem de API Key)
+      const googleRoads = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps',
+        maxZoom: 20
+      });
+
+      // Camada 2: Google Maps - Satélite / Híbrido com nomes de ruas
+      const googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps Satélite',
+        maxZoom: 20
+      });
+
+      // Camada 3: OpenStreetMap Oficial
+      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      });
+
+      // Adiciona o Google Maps como mapa padrão
+      googleRoads.addTo(map);
+
+      // Controle de troca de camadas no canto superior direito
+      const baseMaps = {
+        "🗺️ Google Maps (Ruas)": googleRoads,
+        "🛰️ Google Satélite (Híbrido)": googleHybrid,
+        "🌍 OpenStreetMap": osmLayer
+      };
+
+      L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+      markerClusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 45,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false
+      });
+
+      map.addLayer(markerClusterGroup);
+    }
+
+    function populateDropdowns() {
+      const stats = window.AGENDOR_DATA.stats;
+
+      const selUf = document.getElementById('filterUf');
+      stats.ufs.forEach(uf => {
+        if (!uf || uf === 'Outros') return;
+        const opt = document.createElement('option');
+        opt.value = uf;
+        opt.innerText = uf;
+        selUf.appendChild(opt);
+      });
+
+      const selCat = document.getElementById('filterCat');
+      const listCat = document.getElementById('listCategorias');
+      stats.categorias.forEach(cat => {
+        if (!cat) return;
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.innerText = cat;
+        selCat.appendChild(opt);
+
+        const dOpt = document.createElement('option');
+        dOpt.value = cat;
+        listCat.appendChild(dOpt);
+      });
+
+      const selSetor = document.getElementById('filterSetor');
+      const listSetores = document.getElementById('listSetores');
+      stats.setores.forEach(setor => {
+        if (!setor) return;
+        const opt = document.createElement('option');
+        opt.value = setor;
+        opt.innerText = setor;
+        selSetor.appendChild(opt);
+
+        const dOpt = document.createElement('option');
+        dOpt.value = setor;
+        listSetores.appendChild(dOpt);
+      });
+
+      const selResp = document.getElementById('filterResp');
+      const listResponsaveis = document.getElementById('listResponsaveis');
+      stats.responsaveis.forEach(resp => {
+        if (!resp) return;
+        const opt = document.createElement('option');
+        opt.value = resp;
+        opt.innerText = resp;
+        selResp.appendChild(opt);
+
+        const dOpt = document.createElement('option');
+        dOpt.value = resp;
+        listResponsaveis.appendChild(dOpt);
+      });
+    }
+
+    function setupEventListeners() {
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+      document.getElementById('filterUf').addEventListener('change', applyFilters);
+      document.getElementById('filterCat').addEventListener('change', applyFilters);
+      document.getElementById('filterSetor').addEventListener('change', applyFilters);
+      document.getElementById('filterResp').addEventListener('change', applyFilters);
+      document.getElementById('chkOnlyGps').addEventListener('change', applyFilters);
+      document.getElementById('chkHasHistory').addEventListener('change', applyFilters);
+      document.getElementById('chkHasDeals').addEventListener('change', applyFilters);
+
+      document.getElementById('btnResetFilters').addEventListener('click', () => {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterUf').value = '';
+        document.getElementById('filterCat').value = '';
+        document.getElementById('filterSetor').value = '';
+        document.getElementById('filterResp').value = '';
+        document.getElementById('chkOnlyGps').checked = true;
+        document.getElementById('chkHasHistory').checked = false;
+        document.getElementById('chkHasDeals').checked = false;
+        applyFilters();
+      });
+
+      document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
+
+      document.querySelectorAll('.drawer-tab').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+          document.querySelectorAll('.drawer-tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          tabBtn.classList.add('active');
+          const target = tabBtn.getAttribute('data-tab');
+          document.getElementById(target).classList.add('active');
+        });
+      });
+
+      document.getElementById('btnOpenEditModal').addEventListener('click', openEditModal);
+      document.getElementById('btnCloseModal').addEventListener('click', closeEditModal);
+      document.getElementById('btnCancelEdit').addEventListener('click', closeEditModal);
+      document.getElementById('btnSaveCompany').addEventListener('click', handleSaveCompany);
+
+      document.getElementById('btnAddNote').addEventListener('click', handleAddNote);
+      document.getElementById('btnGeocodeAddress').addEventListener('click', handleGeocode);
+      document.getElementById('btnExportChanges').addEventListener('click', handleExportChanges);
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const uf = document.getElementById('filterUf').value;
+      const cat = document.getElementById('filterCat').value;
+      const setor = document.getElementById('filterSetor').value;
+      const resp = document.getElementById('filterResp').value;
+      const onlyGps = document.getElementById('chkOnlyGps').checked;
+      const hasHistory = document.getElementById('chkHasHistory').checked;
+      const hasDeals = document.getElementById('chkHasDeals').checked;
+
+      filteredEmpresas = allEmpresas.filter(e => {
+        if (onlyGps && !e.has_gps) return false;
+        if (uf && e.endereco.estado !== uf) return false;
+        if (cat && e.categoria !== cat) return false;
+        if (setor && e.setor !== setor) return false;
+        if (resp && e.responsavel !== resp) return false;
+        if (hasHistory && (!e.comentarios || e.comentarios.length === 0)) return false;
+        if (hasDeals && (!e.negocios || e.negocios.length === 0)) return false;
+
+        if (q) {
+          const matchName = (e.nome || '').toLowerCase().includes(q);
+          const matchRazao = (e.razao_social || '').toLowerCase().includes(q);
+          const matchCnpj = (e.cnpj || '').toLowerCase().includes(q);
+          const matchCidade = (e.endereco.cidade || '').toLowerCase().includes(q);
+          const matchPessoas = (e.pessoas || []).some(p => (p.nome || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q));
+          
+          if (!matchName && !matchRazao && !matchCnpj && !matchCidade && !matchPessoas) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      updateMapMarkers();
+      renderCompanyList();
+    }
+
+    function updateMapMarkers() {
+      markerClusterGroup.clearLayers();
+      markersMap.clear();
+
+      const bounds = [];
+
+      filteredEmpresas.forEach(e => {
+        if (e.has_gps && e.lat && e.lng) {
+          const pinColor = e.is_edited ? '#e17055' : '#0086ff';
+          const icon = L.divIcon({
+            className: 'custom-pin-wrapper',
+            html: `<div class="custom-pin" style="background:${pinColor}"><div class="custom-pin-inner"></div></div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 26]
+          });
+
+          const marker = L.marker([e.lat, e.lng], { icon: icon });
+          
+          marker.bindTooltip(`<strong>${e.nome}</strong><br><small style="color:#64748b">${e.endereco.cidade || ''} - ${e.endereco.estado || ''}</small>`, {
+            direction: 'top',
+            offset: [0, -26]
+          });
+
+          marker.on('click', () => {
+            selectCompany(e.id);
+          });
+
+          markerClusterGroup.addLayer(marker);
+          markersMap.set(e.id, marker);
+          bounds.push([e.lat, e.lng]);
+        }
+      });
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+
+    function renderCompanyList() {
+      const listContainer = document.getElementById('companyList');
+      const counterEl = document.getElementById('listCounter');
+      counterEl.innerText = `${filteredEmpresas.length.toLocaleString('pt-BR')} empresas encontradas`;
+
+      if (filteredEmpresas.length === 0) {
+        listContainer.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-building-circle-xmark"></i>
+            <div>Nenhuma empresa encontrada com os filtros selecionados.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const listToRender = filteredEmpresas.slice(0, 150);
+      let html = '';
+
+      listToRender.forEach(e => {
+        const isActive = (e.id === currentSelectedEmpId) ? 'active' : '';
+        const gpsBadge = e.has_gps ? 
+          '<span class="badge badge-gps"><i class="fa-solid fa-location-dot"></i> No Mapa</span>' : 
+          '<span class="badge badge-no-gps"><i class="fa-solid fa-location-slash"></i> Sem GPS</span>';
+        
+        const editedBadge = e.is_edited ? '<span class="badge badge-edited"><i class="fa-solid fa-pen"></i> Editada</span>' : '';
+        const tel = e.contato.celular || e.contato.telefone || '';
+        const cid = e.endereco.cidade ? `${e.endereco.cidade}/${e.endereco.estado}` : (e.endereco.estado || '');
+
+        html += `
+          <div class="company-card ${isActive}" onclick="selectCompany(${e.id})">
+            <div class="card-title">
+              <span>${e.nome}</span>
+              ${gpsBadge}
+            </div>
+            <div class="card-badges">
+              ${editedBadge}
+              ${e.setor ? `<span class="badge badge-primary">${e.setor}</span>` : ''}
+              ${e.categoria ? `<span class="badge badge-secondary">${e.categoria}</span>` : ''}
+            </div>
+            <div class="card-info-row">
+              ${cid ? `<div class="card-info-item"><i class="fa-solid fa-map-pin"></i> ${cid}</div>` : ''}
+              ${tel ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${tel}</div>` : ''}
+              ${(e.comentarios && e.comentarios.length > 0) ? `<div class="card-info-item" style="color:#0086ff"><i class="fa-solid fa-comments"></i> ${e.comentarios.length}</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      if (filteredEmpresas.length > 150) {
+        html += `<div style="text-align:center; padding:12px; font-size:0.75rem; color:#64748b;">Mostrando primeiras 150 empresas de ${filteredEmpresas.length}. Refine a busca para encontrar empresas específicas.</div>`;
+      }
+
+      listContainer.innerHTML = html;
+    }
+
+    function selectCompany(empId) {
+      currentSelectedEmpId = empId;
+      const emp = allEmpresas.find(e => e.id === empId);
+      if (!emp) return;
+
+      if (emp.has_gps && emp.lat && emp.lng) {
+        map.flyTo([emp.lat, emp.lng], 16, { animate: true, duration: 1 });
+      }
+
+      openDrawer(emp);
+      document.querySelectorAll('.company-card').forEach(card => card.classList.remove('active'));
+    }
+
+    function openDrawer(emp) {
+      const drawer = document.getElementById('detailDrawer');
+      
+      document.getElementById('drawerName').innerText = emp.nome;
+      document.getElementById('drawerSub').innerText = `${emp.razao_social || 'Razão Social não informada'} • CNPJ: ${emp.cnpj || 'Não informado'}`;
+
+      const actionsEl = document.getElementById('drawerQuickActions');
+      let actionsHtml = '';
+      
+      const zapNum = emp.contato.whatsapp_num;
+      if (zapNum) {
+        actionsHtml += `<a href="https://wa.me/${zapNum}" target="_blank" class="btn-action btn-whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>`;
+      }
+
+      const phoneNum = emp.contato.telefone || emp.contato.celular;
+      if (phoneNum) {
+        const cleanPhone = phoneNum.replace(/\D/g, '');
+        actionsHtml += `<a href="tel:${cleanPhone}" class="btn-action btn-phone"><i class="fa-solid fa-phone"></i> Ligar</a>`;
+      }
+
+      if (emp.has_gps) {
+        actionsHtml += `<a href="https://www.google.com/maps/search/?api=1&query=${emp.lat},${emp.lng}" target="_blank" class="btn-action btn-maps"><i class="fa-solid fa-diamond-turn-right"></i> Rota Google Maps</a>`;
+      } else if (emp.endereco.endereco_completo) {
+        actionsHtml += `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(emp.endereco.endereco_completo)}" target="_blank" class="btn-action btn-maps"><i class="fa-solid fa-diamond-turn-right"></i> Rota</a>`;
+      }
+
+      actionsEl.innerHTML = actionsHtml;
+
+      document.getElementById('tabCountPessoas').innerText = emp.pessoas ? emp.pessoas.length : 0;
+      document.getElementById('tabCountNegocios').innerText = emp.negocios ? emp.negocios.length : 0;
+      document.getElementById('tabCountHistorico').innerText = emp.comentarios ? emp.comentarios.length : 0;
+      document.getElementById('tabCountTarefas').innerText = emp.tarefas ? emp.tarefas.length : 0;
+
+      document.getElementById('d_fantasia').innerText = emp.nome_fantasia || '-';
+      document.getElementById('d_razao').innerText = emp.razao_social || '-';
+      document.getElementById('d_cnpj').innerText = emp.cnpj || '-';
+      document.getElementById('d_responsavel').innerText = emp.responsavel || '-';
+      document.getElementById('d_setor').innerText = emp.setor || '-';
+      document.getElementById('d_categoria').innerText = emp.categoria || '-';
+      
+      const webEl = document.getElementById('d_website');
+      if (emp.website) {
+        const url = emp.website.startsWith('http') ? emp.website : `https://${emp.website}`;
+        webEl.innerHTML = `<a href="${url}" target="_blank" style="color:var(--primary); text-decoration:none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> ${emp.website}</a>`;
+      } else {
+        webEl.innerText = '-';
+      }
+
+      document.getElementById('d_tel').innerText = emp.contato.telefone || '-';
+      document.getElementById('d_cel').innerText = emp.contato.celular || '-';
+      document.getElementById('d_email').innerText = emp.contato.email || '-';
+
+      document.getElementById('d_endereco').innerText = emp.endereco.endereco_completo || 'Não informado';
+      document.getElementById('d_bairro').innerText = emp.endereco.bairro || '-';
+      document.getElementById('d_cidade_uf').innerText = emp.endereco.cidade ? `${emp.endereco.cidade} / ${emp.endereco.estado}` : '-';
+      document.getElementById('d_cep').innerText = emp.endereco.cep || '-';
+      document.getElementById('d_gps').innerText = emp.has_gps ? `${emp.lat.toFixed(6)}, ${emp.lng.toFixed(6)}` : 'Sem coordenadas GPS';
+
+      const descSection = document.getElementById('sectionDescricao');
+      if (emp.descricao) {
+        descSection.style.display = 'block';
+        document.getElementById('d_descricao').innerText = emp.descricao;
+      } else {
+        descSection.style.display = 'none';
+      }
+
+      const pessoasContainer = document.getElementById('pessoasContainer');
+      if (!emp.pessoas || emp.pessoas.length === 0) {
+        pessoasContainer.innerHTML = `<div class="empty-state"><i class="fa-solid fa-user-slash"></i><div>Nenhum contato vinculado a esta empresa.</div></div>`;
+      } else {
+        let pHtml = '';
+        emp.pessoas.forEach(p => {
+          const pZap = p.whatsapp_num ? `<a href="https://wa.me/${p.whatsapp_num}" target="_blank" class="btn-action btn-whatsapp" style="padding:3px 8px; font-size:0.7rem;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : '';
+          const pTel = p.celular || p.telefone;
+          pHtml += `
+            <div class="person-card">
+              <div class="person-card-header">
+                <div>
+                  <div class="person-name">${p.nome}</div>
+                  <div class="person-role">${p.cargo || 'Cargo não informado'}</div>
+                </div>
+                ${pZap}
+              </div>
+              <div class="card-info-row">
+                ${pTel ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${pTel}</div>` : ''}
+                ${p.email ? `<div class="card-info-item"><i class="fa-solid fa-envelope"></i> ${p.email}</div>` : ''}
+              </div>
+            </div>
+          `;
+        });
+        pessoasContainer.innerHTML = pHtml;
+      }
+
+      const negociosContainer = document.getElementById('negociosContainer');
+      if (!emp.negocios || emp.negocios.length === 0) {
+        negociosContainer.innerHTML = `<div class="empty-state"><i class="fa-solid fa-folder-open"></i><div>Nenhum negócio ou oportunidade registrada.</div></div>`;
+      } else {
+        let nHtml = '';
+        emp.negocios.forEach(n => {
+          const statusClass = (n.status === 'Ganho') ? 'ganho' : ((n.status === 'Perdido') ? 'perdido' : '');
+          nHtml += `
+            <div class="deal-card ${statusClass}">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                <strong style="font-size:0.88rem; color:var(--dark);">${n.titulo}</strong>
+                <span class="badge ${n.status === 'Ganho' ? 'badge-secondary' : (n.status === 'Perdido' ? 'badge-no-gps' : 'badge-primary')}">${n.status}</span>
+              </div>
+              <div style="font-size:1.1rem; font-weight:800; color:var(--primary-dark); margin-bottom:6px;">${n.valor_fmt}</div>
+              <div class="card-info-row">
+                <div class="card-info-item"><i class="fa-solid fa-filter"></i> Etapa: <strong>${n.etapa}</strong></div>
+                ${n.data_inicio ? `<div class="card-info-item"><i class="fa-solid fa-calendar"></i> Início: ${n.data_inicio}</div>` : ''}
+              </div>
+              ${n.descricao ? `<div style="font-size:0.78rem; color:#475569; margin-top:8px; background:#f8fafc; padding:6px 8px; border-radius:4px;">${n.descricao}</div>` : ''}
+            </div>
+          `;
+        });
+        negociosContainer.innerHTML = nHtml;
+      }
+
+      renderHistoricoList(emp);
+
+      const tarefasContainer = document.getElementById('tarefasContainer');
+      if (!emp.tarefas || emp.tarefas.length === 0) {
+        tarefasContainer.innerHTML = `<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><div>Nenhuma tarefa ou agendamento registrado.</div></div>`;
+      } else {
+        let tHtml = '';
+        emp.tarefas.forEach(t => {
+          const checked = t.finalizado ? 'checked disabled' : 'disabled';
+          tHtml += `
+            <div class="task-item">
+              <input type="checkbox" class="task-checkbox" ${checked}>
+              <div style="flex:1">
+                <div class="task-title" style="${t.finalizado ? 'text-decoration:line-through; color:#94a3b8;' : ''}">${t.texto || 'Tarefa sem descrição'}</div>
+                <div class="task-date">
+                  <i class="fa-solid fa-calendar-day"></i> Agendada: ${t.data_agendamento || '-'} 
+                  ${t.data_finalizado ? `• <i class="fa-solid fa-check"></i> Finalizada: ${t.data_finalizado}` : ''}
+                  • Resp: ${t.usuario}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        tarefasContainer.innerHTML = tHtml;
+      }
+
+      document.querySelector('.drawer-tab[data-tab="tab-geral"]').click();
+      drawer.classList.add('open');
+    }
+
+    function renderHistoricoList(emp) {
+      const histContainer = document.getElementById('historicoContainer');
+      if (!emp.comentarios || emp.comentarios.length === 0) {
+        histContainer.innerHTML = `<div class="empty-state"><i class="fa-solid fa-comment-slash"></i><div>Nenhum histórico de anotações para esta empresa.</div></div>`;
+      } else {
+        let cHtml = '';
+        emp.comentarios.forEach(c => {
+          cHtml += `
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-header">
+                <span class="timeline-user"><i class="fa-solid fa-user-circle"></i> ${c.usuario}</span>
+                <span class="timeline-date"><i class="fa-solid fa-clock"></i> ${c.data || ''}</span>
+              </div>
+              <div class="timeline-text">${c.texto}</div>
+            </div>
+          `;
+        });
+        histContainer.innerHTML = cHtml;
+      }
+    }
+
+    function handleAddNote() {
+      const text = document.getElementById('inputNewNote').value.trim();
+      if (!text) {
+        alert("Por favor, digite o conteúdo da anotação.");
+        return;
+      }
+
+      const emp = allEmpresas.find(e => e.id === currentSelectedEmpId);
+      if (!emp) return;
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      const newComment = {
+        id: 'local_' + Date.now(),
+        texto: text,
+        data: dateStr,
+        usuario: emp.responsavel || 'Você'
+      };
+
+      if (!emp.comentarios) emp.comentarios = [];
+      emp.comentarios.unshift(newComment);
+      emp.total_comentarios = emp.comentarios.length;
+      emp.is_edited = true;
+
+      saveEditsToStorage(emp.id, emp);
+      document.getElementById('inputNewNote').value = '';
+      renderHistoricoList(emp);
+      document.getElementById('tabCountHistorico').innerText = emp.comentarios.length;
+      updateGlobalStats();
+      showToast("Nova anotação adicionada ao histórico!");
+    }
+
+    function openEditModal() {
+      const emp = allEmpresas.find(e => e.id === currentSelectedEmpId);
+      if (!emp) return;
+
+      document.getElementById('edit_id').value = emp.id;
+      document.getElementById('edit_nome_fantasia').value = emp.nome_fantasia || emp.nome || '';
+      document.getElementById('edit_razao_social').value = emp.razao_social || '';
+      document.getElementById('edit_cnpj').value = emp.cnpj || '';
+      document.getElementById('edit_setor').value = emp.setor || '';
+      document.getElementById('edit_categoria').value = emp.categoria || '';
+      document.getElementById('edit_responsavel').value = emp.responsavel || '';
+      document.getElementById('edit_website').value = emp.website || '';
+      
+      document.getElementById('edit_telefone').value = emp.contato.telefone || '';
+      document.getElementById('edit_celular').value = emp.contato.celular || '';
+      document.getElementById('edit_whatsapp_num').value = emp.contato.whatsapp_num || '';
+      document.getElementById('edit_email').value = emp.contato.email || '';
+
+      document.getElementById('edit_rua').value = emp.endereco.rua || '';
+      document.getElementById('edit_numero').value = emp.endereco.numero || '';
+      document.getElementById('edit_complemento').value = emp.endereco.complemento || '';
+      document.getElementById('edit_bairro').value = emp.endereco.bairro || '';
+      document.getElementById('edit_cidade').value = emp.endereco.cidade || '';
+      document.getElementById('edit_estado').value = emp.endereco.estado || '';
+      document.getElementById('edit_cep').value = emp.endereco.cep || '';
+      document.getElementById('edit_lat').value = emp.lat || '';
+      document.getElementById('edit_lng').value = emp.lng || '';
+      document.getElementById('edit_descricao').value = emp.descricao || '';
+
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    async function handleGeocode() {
+      const rua = document.getElementById('edit_rua').value.trim();
+      const num = document.getElementById('edit_numero').value.trim();
+      const bairro = document.getElementById('edit_bairro').value.trim();
+      const cidade = document.getElementById('edit_cidade').value.trim();
+      const uf = document.getElementById('edit_estado').value.trim();
+
+      const queryParts = [rua, num, bairro, cidade, uf, "Brasil"].filter(Boolean).join(', ');
+
+      if (!cidade && !rua) {
+        alert("Preencha pelo menos a Cidade ou a Rua para buscar o GPS!");
+        return;
+      }
+
+      const btn = document.getElementById('btnGeocodeAddress');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
+      btn.disabled = true;
+
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryParts)}&limit=1`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          document.getElementById('edit_lat').value = lat.toFixed(6);
+          document.getElementById('edit_lng').value = lon.toFixed(6);
+          showToast(`Coordenadas encontradas: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        } else {
+          const fallbackQuery = [cidade, uf, "Brasil"].filter(Boolean).join(', ');
+          const resFallback = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&limit=1`);
+          const dataFallback = await resFallback.json();
+          if (dataFallback && dataFallback.length > 0) {
+            const lat = parseFloat(dataFallback[0].lat);
+            const lon = parseFloat(dataFallback[0].lon);
+            document.getElementById('edit_lat').value = lat.toFixed(6);
+            document.getElementById('edit_lng').value = lon.toFixed(6);
+            showToast(`Localizado pelo centro da Cidade (${cidade}/${uf})`);
+          } else {
+            alert("Endereço não localizado pelo mapa. Tente digitar as coordenadas manualmente.");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível conectar ao serviço de busca de mapa.");
+      } finally {
+        btn.innerHTML = '<i class="fa-solid fa-map-pin"></i> Obter Coordenadas';
+        btn.disabled = false;
+      }
+    }
+
+    function handleSaveCompany(e) {
+      e.preventDefault();
+      const empId = parseInt(document.getElementById('edit_id').value);
+      const empIndex = allEmpresas.findIndex(item => item.id === empId);
+      if (empIndex === -1) return;
+
+      const emp = allEmpresas[empIndex];
+
+      const nomeFantasia = document.getElementById('edit_nome_fantasia').value.trim();
+      const razaoSocial = document.getElementById('edit_razao_social').value.trim();
+      const cnpj = document.getElementById('edit_cnpj').value.trim();
+      const setor = document.getElementById('edit_setor').value.trim();
+      const categoria = document.getElementById('edit_categoria').value.trim();
+      const responsavel = document.getElementById('edit_responsavel').value.trim();
+      const website = document.getElementById('edit_website').value.trim();
+
+      const tel = document.getElementById('edit_telefone').value.trim();
+      const cel = document.getElementById('edit_celular').value.trim();
+      const zapNum = document.getElementById('edit_whatsapp_num').value.trim();
+      const email = document.getElementById('edit_email').value.trim();
+
+      const rua = document.getElementById('edit_rua').value.trim();
+      const num = document.getElementById('edit_numero').value.trim();
+      const comp = document.getElementById('edit_complemento').value.trim();
+      const bairro = document.getElementById('edit_bairro').value.trim();
+      const cidade = document.getElementById('edit_cidade').value.trim();
+      const uf = document.getElementById('edit_estado').value.trim().toUpperCase();
+      const cep = document.getElementById('edit_cep').value.trim();
+
+      const latVal = document.getElementById('edit_lat').value.trim();
+      const lngVal = document.getElementById('edit_lng').value.trim();
+      const desc = document.getElementById('edit_descricao').value.trim();
+
+      const lat = latVal ? parseFloat(latVal) : null;
+      const lng = lngVal ? parseFloat(lngVal) : null;
+      const hasGps = boolHasGps(lat, lng);
+
+      const enderecoPartes = [rua, num, comp, bairro, cidade, uf, cep].filter(Boolean);
+      const fullAddr = enderecoPartes.join(', ');
+
+      emp.nome = nomeFantasia || razaoSocial || `Empresa #${empId}`;
+      emp.nome_fantasia = nomeFantasia;
+      emp.razao_social = razaoSocial;
+      emp.cnpj = cnpj;
+      emp.setor = setor;
+      emp.categoria = categoria;
+      emp.responsavel = responsavel;
+      emp.website = website;
+      emp.descricao = desc;
+
+      emp.contato = {
+        telefone: tel,
+        celular: cel,
+        email: email,
+        whatsapp_num: zapNum
+      };
+
+      emp.endereco = {
+        rua: rua,
+        numero: num,
+        complemento: comp,
+        bairro: bairro,
+        cidade: cidade,
+        estado: uf,
+        cep: cep,
+        endereco_completo: fullAddr,
+        lat: lat,
+        lng: lng,
+        has_gps: hasGps
+      };
+
+      emp.lat = lat;
+      emp.lng = lng;
+      emp.has_gps = hasGps;
+      emp.is_edited = true;
+
+      saveEditsToStorage(empId, emp);
+
+      closeEditModal();
+      openDrawer(emp);
+      updateGlobalStats();
+      applyFilters();
+      showToast("Dados da empresa atualizados com sucesso!");
+    }
+
+    function boolHasGps(lat, lng) {
+      return (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0));
+    }
+
+    function handleExportChanges() {
+      const exportData = {
+        exportado_em: new Date().toLocaleString('pt-BR'),
+        stats: window.AGENDOR_DATA.stats,
+        empresas: allEmpresas
+      };
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Agendor_Dados_Atualizados_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Download do arquivo de dados concluído!");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      toast.querySelector('span').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function closeDrawer() {
+      document.getElementById('detailDrawer').classList.remove('open');
+      currentSelectedEmpId = null;
+    }
+  </script>
+</body>
+</html>
