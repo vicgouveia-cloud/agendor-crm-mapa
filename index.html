@@ -140,7 +140,7 @@
 
     /* Sidebar / Filters */
     .sidebar {
-      width: 420px;
+      width: 430px;
       background: var(--white);
       border-right: 1px solid var(--border);
       display: flex;
@@ -223,15 +223,19 @@
     .filter-toggles {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
+      background: #f1f5f9;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 4px;
     }
 
     .toggle-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
+      font-size: 0.76rem;
+      color: var(--text);
       cursor: pointer;
       user-select: none;
     }
@@ -240,13 +244,17 @@
       cursor: pointer;
     }
 
+    .toggle-item.highlight {
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
     .filter-actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-top: 8px;
       padding-top: 6px;
-      border-top: 1px dashed var(--border);
     }
 
     .btn-reset {
@@ -269,8 +277,11 @@
       font-weight: 700;
       color: var(--primary-dark);
       background: var(--primary-light);
-      padding: 2px 8px;
+      padding: 3px 8px;
       border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
     /* List Results */
@@ -359,6 +370,30 @@
     #map {
       width: 100%;
       height: 100%;
+    }
+
+    /* Floating Viewport Indicator Badge */
+    .viewport-indicator {
+      position: absolute;
+      top: 14px;
+      left: 60px;
+      z-index: 400;
+      background: rgba(15, 28, 63, 0.9);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(4px);
+    }
+
+    .viewport-indicator span {
+      color: #38bdf8;
+      font-weight: 700;
     }
 
     /* Offcanvas Detail Drawer */
@@ -1060,9 +1095,13 @@
 
         <!-- Toggles -->
         <div class="filter-toggles">
+          <label class="toggle-item highlight">
+            <input type="checkbox" id="chkSyncMapBounds" checked>
+            <span><i class="fa-solid fa-crosshairs" style="color:var(--primary);"></i> <strong>Apenas na área visível do mapa</strong></span>
+          </label>
           <label class="toggle-item">
             <input type="checkbox" id="chkOnlyGps" checked>
-            <span>Mostrar apenas com localização no mapa</span>
+            <span>Mostrar apenas com localização GPS</span>
           </label>
           <label class="toggle-item">
             <input type="checkbox" id="chkHasHistory">
@@ -1076,7 +1115,9 @@
 
         <!-- Action Bar -->
         <div class="filter-actions">
-          <span class="counter-badge" id="listCounter">0 empresas encontradas</span>
+          <span class="counter-badge" id="listCounter">
+            <i class="fa-solid fa-eye"></i> <span id="counterText">0 empresas</span>
+          </span>
           <button class="btn-reset" id="btnResetFilters">
             <i class="fa-solid fa-rotate-left"></i> Limpar filtros
           </button>
@@ -1091,6 +1132,9 @@
 
     <!-- Map View -->
     <main class="map-wrapper">
+      <div class="viewport-indicator" id="viewportIndicator">
+        <i class="fa-solid fa-map-location-dot"></i> Exibindo <span id="vpCount">0</span> empresas nesta visão
+      </div>
       <div id="map"></div>
     </main>
 
@@ -1406,6 +1450,7 @@
     let allEmpresas = [];
     let filteredEmpresas = [];
     let currentSelectedEmpId = null;
+    let isProgrammaticMove = false;
     const STORAGE_KEY = "AGENDOR_CRM_EDITS_CACHE_V2";
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1464,35 +1509,29 @@
     }
 
     function initMap() {
-      // Cria o mapa base
       map = L.map('map', {
         zoomControl: true
       }).setView([-23.5505, -46.6333], 7);
 
-      // Camada 1: Google Maps - Ruas / Padrão (Sem mensagem de API Key)
       const googleRoads = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         subdomains: ['0', '1', '2', '3'],
         attribution: '&copy; Google Maps',
         maxZoom: 20
       });
 
-      // Camada 2: Google Maps - Satélite / Híbrido com nomes de ruas
       const googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
         subdomains: ['0', '1', '2', '3'],
         attribution: '&copy; Google Maps Satélite',
         maxZoom: 20
       });
 
-      // Camada 3: OpenStreetMap Oficial
       const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19
       });
 
-      // Adiciona o Google Maps como mapa padrão
       googleRoads.addTo(map);
 
-      // Controle de troca de camadas no canto superior direito
       const baseMaps = {
         "🗺️ Google Maps (Ruas)": googleRoads,
         "🛰️ Google Satélite (Híbrido)": googleHybrid,
@@ -1509,6 +1548,13 @@
       });
 
       map.addLayer(markerClusterGroup);
+
+      // Evento ao mover / dar zoom no mapa: sincroniza lista lateral
+      map.on('moveend zoomend', () => {
+        if (document.getElementById('chkSyncMapBounds').checked) {
+          renderCompanyList();
+        }
+      });
     }
 
     function populateDropdowns() {
@@ -1575,6 +1621,9 @@
       document.getElementById('chkOnlyGps').addEventListener('change', applyFilters);
       document.getElementById('chkHasHistory').addEventListener('change', applyFilters);
       document.getElementById('chkHasDeals').addEventListener('change', applyFilters);
+      document.getElementById('chkSyncMapBounds').addEventListener('change', () => {
+        renderCompanyList();
+      });
 
       document.getElementById('btnResetFilters').addEventListener('click', () => {
         document.getElementById('searchInput').value = '';
@@ -1583,6 +1632,7 @@
         document.getElementById('filterSetor').value = '';
         document.getElementById('filterResp').value = '';
         document.getElementById('chkOnlyGps').checked = true;
+        document.getElementById('chkSyncMapBounds').checked = true;
         document.getElementById('chkHasHistory').checked = false;
         document.getElementById('chkHasDeals').checked = false;
         applyFilters();
@@ -1681,27 +1731,47 @@
         }
       });
 
-      if (bounds.length > 0) {
+      if (bounds.length > 0 && !isProgrammaticMove) {
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
       }
     }
 
     function renderCompanyList() {
       const listContainer = document.getElementById('companyList');
-      const counterEl = document.getElementById('listCounter');
-      counterEl.innerText = `${filteredEmpresas.length.toLocaleString('pt-BR')} empresas encontradas`;
+      const counterTextEl = document.getElementById('counterText');
+      const vpCountEl = document.getElementById('vpCount');
+      const syncWithBounds = document.getElementById('chkSyncMapBounds').checked;
 
-      if (filteredEmpresas.length === 0) {
+      // Obtém os limites visíveis da tela do mapa
+      const mapBounds = map ? map.getBounds() : null;
+
+      // Filtra por limites visíveis do mapa se a opção estiver ativada
+      let visibleList = filteredEmpresas;
+      if (syncWithBounds && mapBounds) {
+        visibleList = filteredEmpresas.filter(e => {
+          if (e.has_gps && e.lat && e.lng) {
+            return mapBounds.contains([e.lat, e.lng]);
+          }
+          return false;
+        });
+      }
+
+      // Atualiza os contadores
+      counterTextEl.innerText = `${visibleList.length.toLocaleString('pt-BR')} empresas nesta área`;
+      vpCountEl.innerText = visibleList.length.toLocaleString('pt-BR');
+
+      if (visibleList.length === 0) {
         listContainer.innerHTML = `
           <div class="empty-state">
-            <i class="fa-solid fa-building-circle-xmark"></i>
-            <div>Nenhuma empresa encontrada com os filtros selecionados.</div>
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <div style="font-weight:600; color:var(--dark); margin-bottom:4px;">Nenhuma empresa nesta área do mapa.</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Aproxime ou arraste o mapa para outra cidade ou desmarque "Apenas na área visível".</div>
           </div>
         `;
         return;
       }
 
-      const listToRender = filteredEmpresas.slice(0, 150);
+      const listToRender = visibleList.slice(0, 150);
       let html = '';
 
       listToRender.forEach(e => {
@@ -1734,8 +1804,8 @@
         `;
       });
 
-      if (filteredEmpresas.length > 150) {
-        html += `<div style="text-align:center; padding:12px; font-size:0.75rem; color:#64748b;">Mostrando primeiras 150 empresas de ${filteredEmpresas.length}. Refine a busca para encontrar empresas específicas.</div>`;
+      if (visibleList.length > 150) {
+        html += `<div style="text-align:center; padding:10px; font-size:0.72rem; color:#64748b;">Mostrando as primeiras 150 de ${visibleList.length} empresas visíveis. Dê mais zoom para detalhar um bairro específico.</div>`;
       }
 
       listContainer.innerHTML = html;
@@ -1747,7 +1817,9 @@
       if (!emp) return;
 
       if (emp.has_gps && emp.lat && emp.lng) {
-        map.flyTo([emp.lat, emp.lng], 16, { animate: true, duration: 1 });
+        isProgrammaticMove = true;
+        map.flyTo([emp.lat, emp.lng], Math.max(map.getZoom(), 15), { animate: true, duration: 0.8 });
+        setTimeout(() => { isProgrammaticMove = false; }, 1000);
       }
 
       openDrawer(emp);
