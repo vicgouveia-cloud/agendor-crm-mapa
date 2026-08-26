@@ -1828,7 +1828,7 @@
         const cid = e.endereco.cidade ? `${e.endereco.cidade}/${e.endereco.estado}` : (e.endereco.estado || '');
 
         html += `
-          <div class="company-card ${isActive}" onclick="selectCompany(${e.id})">
+          <div class="company-card ${isActive}" onclick="selectCompany(${e.id})" onmouseenter="highlightMarker(${e.id})" onmouseleave="unhighlightMarker(${e.id})">
             <div class="card-title">
               <span>${e.nome}</span>
               ${gpsBadge}
@@ -1854,6 +1854,20 @@
       }
 
       listContainer.innerHTML = html;
+    }
+
+    function highlightMarker(empId) {
+      const marker = markersMap.get(empId);
+      if (marker) {
+        marker.openTooltip();
+      }
+    }
+
+    function unhighlightMarker(empId) {
+      const marker = markersMap.get(empId);
+      if (marker) {
+        marker.closeTooltip();
+      }
     }
 
     function selectCompany(empId) {
