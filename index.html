@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Agendor CRM - Mapa Interativo (Web & Mobile)</title>
+  <title>Agendor CRM - Mapa Interativo</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -33,6 +33,7 @@
       --white: #ffffff;
       --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
       --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      --header-h: 56px;
     }
 
     * {
@@ -57,7 +58,7 @@
     header {
       background: #0f1c3f;
       color: white;
-      height: 56px;
+      height: var(--header-h);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -71,7 +72,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 700;
       letter-spacing: -0.5px;
       white-space: nowrap;
@@ -139,8 +140,8 @@
     .app-container {
       display: flex;
       flex: 1;
-      height: calc(100vh - 56px);
-      height: calc(100dvh - 56px);
+      height: calc(100vh - var(--header-h));
+      height: calc(100dvh - var(--header-h));
       position: relative;
       overflow: hidden;
     }
@@ -154,7 +155,7 @@
       flex-direction: column;
       height: 100%;
       z-index: 500;
-      transition: transform 0.3s ease, right 0.3s ease;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       box-shadow: 2px 0 8px rgba(0,0,0,0.04);
       flex-shrink: 0;
     }
@@ -163,9 +164,12 @@
       padding: 12px 14px;
       border-bottom: 1px solid var(--border);
       background: #fafbfc;
+      position: sticky;
+      top: 0;
+      z-index: 600;
     }
 
-    .mobile-sidebar-close {
+    .mobile-back-bar {
       display: none;
     }
 
@@ -423,7 +427,7 @@
     .mobile-float-bar {
       display: none;
       position: absolute;
-      bottom: 20px;
+      bottom: max(16px, env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
       z-index: 800;
@@ -433,13 +437,14 @@
       border-radius: 30px;
       box-shadow: var(--shadow-lg);
       backdrop-filter: blur(8px);
+      white-space: nowrap;
     }
 
     .btn-mobile-pill {
       background: #0086ff;
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 9px 16px;
       border-radius: 20px;
       font-size: 0.82rem;
       font-weight: 700;
@@ -1097,11 +1102,15 @@
     }
 
     /* =========================================================================
-       RESPONSIVIDADE MOBILE (SMARTPHONES & TABLETS <= 768px)
+       RESPONSIVIDADE INTELIGENTE (SMARTPHONES COMO IPHONE SE, ANDROID, ETC)
        ========================================================================= */
     @media (max-width: 768px) {
+      :root {
+        --header-h: 50px;
+      }
+
       header {
-        height: 50px;
+        height: var(--header-h);
         padding: 0 12px;
       }
 
@@ -1110,7 +1119,7 @@
       }
 
       .brand span {
-        display: none; /* Deixa apenas a logo em telas muito pequenas */
+        display: none;
       }
 
       .brand::after {
@@ -1134,11 +1143,11 @@
       }
 
       .app-container {
-        height: calc(100vh - 50px);
-        height: calc(100dvh - 50px);
+        height: calc(100vh - var(--header-h));
+        height: calc(100dvh - var(--header-h));
       }
 
-      /* Sidebar vira um Drawer Offcanvas deslizante no mobile */
+      /* Sidebar vira um painel deslizante com header fixo */
       .sidebar {
         position: absolute;
         top: 0;
@@ -1149,36 +1158,50 @@
         transform: translateY(100%);
         border-right: none;
         box-shadow: none;
+        background: #ffffff;
       }
 
       .sidebar.mobile-open {
         transform: translateY(0);
       }
 
-      .mobile-sidebar-close {
+      /* Barra de topo do painel mobile sempre fixa e visível */
+      .mobile-back-bar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-bottom: 8px;
-        margin-bottom: 8px;
-        border-bottom: 1px solid var(--border);
+        background: #0f1c3f;
+        color: white;
+        padding: 10px 12px;
+        margin: -12px -14px 10px -14px;
       }
 
-      .mobile-sidebar-close span {
-        font-size: 0.95rem;
-        font-weight: 800;
-        color: var(--dark);
-      }
-
-      .btn-close-mobile-sidebar {
-        background: #f1f5f9;
-        border: none;
-        color: var(--dark);
-        padding: 6px 12px;
-        border-radius: 6px;
+      .mobile-back-bar span {
+        font-size: 0.9rem;
         font-weight: 700;
-        font-size: 0.78rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .btn-return-map {
+        background: #0086ff;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.8rem;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      }
+
+      .btn-return-map:active {
+        background: #0068cc;
+        transform: scale(0.97);
       }
 
       .filter-grid {
@@ -1205,6 +1228,7 @@
       .detail-drawer {
         width: 100%;
         right: -100%;
+        z-index: 1500;
       }
 
       .drawer-company-name {
@@ -1278,11 +1302,11 @@
     <aside class="sidebar" id="appSidebar">
       <div class="sidebar-header">
         
-        <!-- Mobile close button -->
-        <div class="mobile-sidebar-close">
-          <span><i class="fa-solid fa-sliders"></i> Filtros & Lista</span>
-          <button class="btn-close-mobile-sidebar" id="btnCloseMobileSidebar">
-            <i class="fa-solid fa-map"></i> Ver Mapa
+        <!-- Mobile Sticky Return Bar -->
+        <div class="mobile-back-bar">
+          <span><i class="fa-solid fa-filter"></i> Filtros & Lista</span>
+          <button class="btn-return-map" id="btnReturnMap">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Mapa
           </button>
         </div>
 
@@ -1901,18 +1925,23 @@
         applyFilters();
       });
 
-      // Mobile Floating Controls
+      // Mobile Navigation Controls
       const sidebar = document.getElementById('appSidebar');
+      const closeMobileSidebar = () => {
+        sidebar.classList.remove('mobile-open');
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+        }, 300);
+      };
+
       document.getElementById('btnOpenMobileList').addEventListener('click', () => {
         sidebar.classList.add('mobile-open');
       });
       document.getElementById('btnOpenMobileFilters').addEventListener('click', () => {
         sidebar.classList.add('mobile-open');
-        window.scrollTo(0, 0);
+        sidebar.scrollTop = 0;
       });
-      document.getElementById('btnCloseMobileSidebar').addEventListener('click', () => {
-        sidebar.classList.remove('mobile-open');
-      });
+      document.getElementById('btnReturnMap').addEventListener('click', closeMobileSidebar);
 
       document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
 
@@ -2048,7 +2077,10 @@
           <div class="empty-state">
             <i class="fa-solid fa-location-crosshairs"></i>
             <div style="font-weight:600; color:var(--dark); margin-bottom:4px;">Nenhuma empresa nesta área do mapa.</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">Aproxime ou arraste o mapa para outra cidade ou desmarque "Apenas na área visível".</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">Aproxime ou arraste o mapa para outra cidade ou desmarque "Apenas na área visível".</div>
+            <button class="btn-return-map" onclick="document.getElementById('btnReturnMap').click()" style="margin: 0 auto;">
+              <i class="fa-solid fa-map"></i> Ver Mapa Completo
+            </button>
           </div>
         `;
         return;
@@ -2122,7 +2154,7 @@
       const emp = allEmpresas.find(e => e.id === empId);
       if (!emp) return;
 
-      // Se estiver no mobile e abrir pela lista, fecha a lista para ver os detalhes
+      // Se estiver no mobile e abrir pela lista, fecha a lista suavemente para ver os detalhes
       if (window.innerWidth <= 768) {
         document.getElementById('appSidebar').classList.remove('mobile-open');
       }
@@ -2130,7 +2162,10 @@
       if (emp.has_gps && emp.lat && emp.lng) {
         isProgrammaticMove = true;
         map.flyTo([emp.lat, emp.lng], Math.max(map.getZoom(), 15), { animate: true, duration: 0.8 });
-        setTimeout(() => { isProgrammaticMove = false; }, 1000);
+        setTimeout(() => { 
+          isProgrammaticMove = false; 
+          if (map) map.invalidateSize();
+        }, 1000);
       }
 
       openDrawer(emp);
