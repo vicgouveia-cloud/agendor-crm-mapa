@@ -471,6 +471,77 @@
       font-weight: 700;
     }
 
+    /* Floating Location Button */
+    .btn-locate-me {
+      position: absolute;
+      right: 14px;
+      bottom: 24px;
+      z-index: 450;
+      background: #ffffff;
+      color: #0f1c3f;
+      border: 2px solid rgba(0, 134, 255, 0.3);
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-locate-me:hover {
+      background: #f0f7ff;
+      border-color: var(--primary);
+      transform: scale(1.08);
+      color: var(--primary);
+    }
+
+    .btn-locate-me:active {
+      transform: scale(0.95);
+    }
+
+    .btn-locate-me.locating {
+      color: var(--primary);
+      animation: spinIcon 1s infinite linear;
+    }
+
+    @keyframes spinIcon {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* User Pulse Marker */
+    .user-location-pulse {
+      width: 20px;
+      height: 20px;
+      background: #0086ff;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 10px rgba(0, 134, 255, 0.8);
+      position: relative;
+    }
+
+    .user-location-pulse::after {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+      border-radius: 50%;
+      background: rgba(0, 134, 255, 0.4);
+      animation: userWave 2s infinite ease-out;
+      z-index: -1;
+    }
+
+    @keyframes userWave {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
     /* Mobile Floating Controls */
     .mobile-float-bar {
       display: none;
@@ -1239,6 +1310,14 @@
         padding: 4px 10px;
       }
 
+      /* Botão de Localização no Mobile */
+      .btn-locate-me {
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 54px);
+        right: 14px;
+        width: 44px;
+        height: 44px;
+      }
+
       /* Barra flutuante de navegação no rodapé */
       .mobile-float-bar {
         display: flex;
@@ -1322,7 +1401,7 @@
     <!-- Sidebar / Filters & List -->
     <aside class="sidebar" id="appSidebar">
       
-      <!-- Mobile Sticky Return Bar (Única barra fixa no topo do painel mobile) -->
+      <!-- Mobile Sticky Return Bar -->
       <div class="mobile-back-bar">
         <span><i class="fa-solid fa-sliders"></i> Filtros & Lista</span>
         <button class="btn-return-map" id="btnReturnMap">
@@ -1417,6 +1496,11 @@
       </div>
       
       <div id="map"></div>
+
+      <!-- User Geolocation Button -->
+      <button class="btn-locate-me" id="btnLocateMe" title="Minha Localização Atual">
+        <i class="fa-solid fa-location-crosshairs"></i>
+      </button>
 
       <!-- Mobile Floating Navigation Button Bar -->
       <div class="mobile-float-bar">
@@ -1757,6 +1841,9 @@
     let filteredEmpresas = [];
     let currentSelectedEmpId = null;
     let isProgrammaticMove = false;
+    let userMarker = null;
+    let userAccuracyCircle = null;
+    let userCoords = null;
     const STORAGE_KEY = "AGENDOR_CRM_EDITS_CACHE_V2";
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1773,6 +1860,9 @@
       populateDropdowns();
       setupEventListeners();
       applyFilters();
+
+      // Solicita localização do usuário de forma suave
+      requestUserLocation(false);
     });
 
     function loadSavedEdits() {
@@ -1863,6 +1953,71 @@
       });
     }
 
+    // Geolocation / User Position on Map
+    function requestUserLocation(flyToUser = true) {
+      if (!navigator.geolocation) return;
+
+      const btnLocate = document.getElementById('btnLocateMe');
+      btnLocate.classList.add('locating');
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          btnLocate.classList.remove('locating');
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy || 50;
+          userCoords = { lat, lng };
+
+          updateUserLocationMarker(lat, lng, accuracy);
+
+          if (flyToUser) {
+            isProgrammaticMove = true;
+            map.flyTo([lat, lng], 14, { animate: true, duration: 1 });
+            setTimeout(() => {
+              isProgrammaticMove = false;
+              renderCompanyList();
+            }, 1100);
+            showToast("Localização encontrada! Mostrando empresas perto de você.");
+          }
+        },
+        err => {
+          btnLocate.classList.remove('locating');
+          if (flyToUser) {
+            alert("Não foi possível obter sua localização. Verifique se a permissão de GPS está ativa no seu navegador.");
+          }
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      );
+    }
+
+    function updateUserLocationMarker(lat, lng, accuracy) {
+      if (userMarker) {
+        map.removeLayer(userMarker);
+      }
+      if (userAccuracyCircle) {
+        map.removeLayer(userAccuracyCircle);
+      }
+
+      const userIcon = L.divIcon({
+        className: 'user-marker-wrapper',
+        html: `<div class="user-location-pulse" title="Você está aqui"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+      userMarker.bindTooltip("<strong>📍 Você está aqui</strong>", { direction: 'top', offset: [0, -10] });
+
+      userAccuracyCircle = L.circle([lat, lng], {
+        radius: Math.min(accuracy, 1000),
+        color: '#0086ff',
+        fillColor: '#0086ff',
+        fillOpacity: 0.12,
+        weight: 1,
+        dashArray: '3, 6'
+      }).addTo(map);
+    }
+
     function populateDropdowns() {
       const stats = window.AGENDOR_DATA.stats;
 
@@ -1944,6 +2099,11 @@
         document.getElementById('chkHasHistory').checked = false;
         document.getElementById('chkHasDeals').checked = false;
         applyFilters();
+      });
+
+      // User Geolocation Button
+      document.getElementById('btnLocateMe').addEventListener('click', () => {
+        requestUserLocation(true);
       });
 
       // Mobile Navigation Controls
@@ -2063,7 +2223,7 @@
         }
       });
 
-      if (bounds.length > 0 && !isProgrammaticMove) {
+      if (bounds.length > 0 && !isProgrammaticMove && !userCoords) {
         map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
       }
     }
