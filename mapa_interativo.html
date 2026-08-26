@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agendor CRM - Mapa Interativo com Google Maps</title>
+  <title>Agendor CRM - Mapa Interativo com Filtro por Fonte (Agendor / Google)</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,7 +24,7 @@
       --secondary: #00b894;
       --secondary-dark: #009879;
       --warning: #fdcb6e;
-      --danger: #e17055;
+      --danger: #ea4335;
       --dark: #0f172a;
       --text: #1e293b;
       --text-muted: #64748b;
@@ -95,8 +95,8 @@
     .top-stats {
       display: flex;
       align-items: center;
-      gap: 16px;
-      font-size: 0.82rem;
+      gap: 14px;
+      font-size: 0.8rem;
       color: #94a3b8;
       margin-right: 10px;
     }
@@ -140,7 +140,7 @@
 
     /* Sidebar / Filters */
     .sidebar {
-      width: 430px;
+      width: 440px;
       background: var(--white);
       border-right: 1px solid var(--border);
       display: flex;
@@ -152,14 +152,14 @@
     }
 
     .sidebar-header {
-      padding: 14px 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       background: #fafbfc;
     }
 
     .search-box {
       position: relative;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .search-box i {
@@ -173,10 +173,10 @@
 
     .search-box input {
       width: 100%;
-      padding: 9px 12px 9px 36px;
+      padding: 8px 12px 8px 36px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 0.85rem;
+      font-size: 0.84rem;
       outline: none;
       transition: all 0.2s;
       background: white;
@@ -191,12 +191,12 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .filter-group label {
       display: block;
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 700;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -206,10 +206,10 @@
 
     .filter-group select {
       width: 100%;
-      padding: 6px 8px;
+      padding: 5px 8px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       background: white;
       color: var(--text);
       outline: none;
@@ -220,13 +220,19 @@
       border-color: var(--primary);
     }
 
+    .filter-group.fonte select {
+      border-color: #93c5fd;
+      background: #f8faff;
+      font-weight: 600;
+    }
+
     .filter-toggles {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
       background: #f1f5f9;
-      padding: 8px 10px;
-      border-radius: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
       margin-top: 4px;
     }
 
@@ -234,7 +240,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       color: var(--text);
       cursor: pointer;
       user-select: none;
@@ -253,8 +259,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-top: 8px;
-      padding-top: 6px;
+      margin-top: 6px;
+      padding-top: 4px;
     }
 
     .btn-reset {
@@ -273,11 +279,11 @@
     }
 
     .counter-badge {
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: var(--primary-dark);
       background: var(--primary-light);
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 12px;
       display: inline-flex;
       align-items: center;
@@ -344,6 +350,9 @@
     .badge-edited { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
     .badge-gps { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
     .badge-no-gps { background: #fef2f2; color: #dc2626; }
+    
+    .badge-fonte-agendor { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .badge-fonte-google { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700; }
 
     .card-info-row {
       display: flex;
@@ -372,7 +381,6 @@
       height: 100%;
     }
 
-    /* Floating Viewport Indicator Badge */
     .viewport-indicator {
       position: absolute;
       top: 14px;
@@ -1042,9 +1050,9 @@
     
     <div class="top-actions">
       <div class="top-stats">
-        <div class="top-stat-item"><i class="fa-solid fa-building"></i> <span id="stat-total-emp">0</span> Empresas</div>
-        <div class="top-stat-item"><i class="fa-solid fa-location-dot"></i> <span id="stat-total-gps">0</span> no Mapa</div>
-        <div class="top-stat-item"><i class="fa-solid fa-pen-to-square" style="color:#fdcb6e"></i> <span id="stat-total-edit">0</span> Editadas</div>
+        <div class="top-stat-item"><i class="fa-solid fa-cloud" style="color:#38bdf8"></i> Agendor: <strong id="stat-total-agendor">0</strong></div>
+        <div class="top-stat-item"><i class="fa-brands fa-google" style="color:#f87171"></i> Google: <strong id="stat-total-google">0</strong></div>
+        <div class="top-stat-item"><i class="fa-solid fa-location-dot" style="color:#4ade80"></i> No Mapa: <strong id="stat-total-gps">0</strong></div>
       </div>
       
       <button class="btn-top btn-save-export" id="btnExportChanges" title="Baixar arquivo com as alterações salvas">
@@ -1065,8 +1073,16 @@
           <input type="text" id="searchInput" placeholder="Buscar por empresa, CNPJ, contato, cidade..." />
         </div>
 
-        <!-- Filter Dropdowns -->
-        <div class="filter-grid">
+        <!-- Filter Dropdowns com FONTE adicionada -->
+        <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="filter-group fonte" style="grid-column: span 1;">
+            <label><i class="fa-solid fa-database"></i> Fonte</label>
+            <select id="filterFonte">
+              <option value="">Todas as Fontes</option>
+              <option value="Agendor">Agendor (Base)</option>
+              <option value="Google">Google (Prospecção)</option>
+            </select>
+          </div>
           <div class="filter-group">
             <label>Estado (UF)</label>
             <select id="filterUf">
@@ -1085,10 +1101,10 @@
               <option value="">Todos os Setores</option>
             </select>
           </div>
-          <div class="filter-group">
+          <div class="filter-group" style="grid-column: span 2;">
             <label>Responsável</label>
             <select id="filterResp">
-              <option value="">Todos</option>
+              <option value="">Todos os Responsáveis</option>
             </select>
           </div>
         </div>
@@ -1186,6 +1202,10 @@
                 <div class="info-value" id="d_cnpj">-</div>
               </div>
               <div class="info-cell">
+                <div class="info-label">Fonte do Lead</div>
+                <div class="info-value" id="d_fonte">-</div>
+              </div>
+              <div class="info-cell">
                 <div class="info-label">Responsável</div>
                 <div class="info-value" id="d_responsavel">-</div>
               </div>
@@ -1196,6 +1216,10 @@
               <div class="info-cell">
                 <div class="info-label">Categoria</div>
                 <div class="info-value" id="d_categoria">-</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Data de Cadastro</div>
+                <div class="info-value" id="d_dt_cad">-</div>
               </div>
               <div class="info-cell full-width">
                 <div class="info-label">Website</div>
@@ -1319,18 +1343,25 @@
               <input type="text" id="edit_cnpj" placeholder="00.000.000/0000-00" />
             </div>
             <div class="form-field">
+              <label>Fonte</label>
+              <select id="edit_fonte">
+                <option value="Agendor">Agendor</option>
+                <option value="Google">Google</option>
+              </select>
+            </div>
+            <div class="form-field">
               <label>Setor</label>
               <input type="text" id="edit_setor" list="listSetores" />
               <datalist id="listSetores"></datalist>
             </div>
+          </div>
+
+          <div class="form-grid-3">
             <div class="form-field">
               <label>Categoria</label>
               <input type="text" id="edit_categoria" list="listCategorias" />
               <datalist id="listCategorias"></datalist>
             </div>
-          </div>
-
-          <div class="form-grid-2">
             <div class="form-field">
               <label>Responsável</label>
               <input type="text" id="edit_responsavel" list="listResponsaveis" />
@@ -1499,13 +1530,13 @@
     }
 
     function updateGlobalStats() {
-      const totalEmp = allEmpresas.length;
+      const agendorCount = allEmpresas.filter(e => e.fonte === 'Agendor').length;
+      const googleCount = allEmpresas.filter(e => e.fonte === 'Google').length;
       const totalGps = allEmpresas.filter(e => e.has_gps).length;
-      const totalEdited = allEmpresas.filter(e => e.is_edited).length;
 
-      document.getElementById('stat-total-emp').innerText = totalEmp.toLocaleString('pt-BR');
+      document.getElementById('stat-total-agendor').innerText = agendorCount.toLocaleString('pt-BR');
+      document.getElementById('stat-total-google').innerText = googleCount.toLocaleString('pt-BR');
       document.getElementById('stat-total-gps').innerText = totalGps.toLocaleString('pt-BR');
-      document.getElementById('stat-total-edit').innerText = totalEdited.toLocaleString('pt-BR');
     }
 
     function initMap() {
@@ -1549,7 +1580,6 @@
 
       map.addLayer(markerClusterGroup);
 
-      // Evento ao mover / dar zoom no mapa: sincroniza lista lateral
       map.on('moveend zoomend', () => {
         if (document.getElementById('chkSyncMapBounds').checked) {
           renderCompanyList();
@@ -1614,6 +1644,7 @@
 
     function setupEventListeners() {
       document.getElementById('searchInput').addEventListener('input', applyFilters);
+      document.getElementById('filterFonte').addEventListener('change', applyFilters);
       document.getElementById('filterUf').addEventListener('change', applyFilters);
       document.getElementById('filterCat').addEventListener('change', applyFilters);
       document.getElementById('filterSetor').addEventListener('change', applyFilters);
@@ -1627,6 +1658,7 @@
 
       document.getElementById('btnResetFilters').addEventListener('click', () => {
         document.getElementById('searchInput').value = '';
+        document.getElementById('filterFonte').value = '';
         document.getElementById('filterUf').value = '';
         document.getElementById('filterCat').value = '';
         document.getElementById('filterSetor').value = '';
@@ -1663,6 +1695,7 @@
 
     function applyFilters() {
       const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const fonte = document.getElementById('filterFonte').value;
       const uf = document.getElementById('filterUf').value;
       const cat = document.getElementById('filterCat').value;
       const setor = document.getElementById('filterSetor').value;
@@ -1672,6 +1705,7 @@
       const hasDeals = document.getElementById('chkHasDeals').checked;
 
       filteredEmpresas = allEmpresas.filter(e => {
+        if (fonte && e.fonte !== fonte) return false;
         if (onlyGps && !e.has_gps) return false;
         if (uf && e.endereco.estado !== uf) return false;
         if (cat && e.categoria !== cat) return false;
@@ -1706,7 +1740,11 @@
 
       filteredEmpresas.forEach(e => {
         if (e.has_gps && e.lat && e.lng) {
-          const pinColor = e.is_edited ? '#e17055' : '#0086ff';
+          // Cor do pino por Fonte e Edição
+          let pinColor = '#0086ff'; // Padrão Agendor azul
+          if (e.fonte === 'Google') pinColor = '#ea4335'; // Vermelho Google
+          if (e.is_edited) pinColor = '#f59e0b'; // Dourado editado
+
           const icon = L.divIcon({
             className: 'custom-pin-wrapper',
             html: `<div class="custom-pin" style="background:${pinColor}"><div class="custom-pin-inner"></div></div>`,
@@ -1716,7 +1754,8 @@
 
           const marker = L.marker([e.lat, e.lng], { icon: icon });
           
-          marker.bindTooltip(`<strong>${e.nome}</strong><br><small style="color:#64748b">${e.endereco.cidade || ''} - ${e.endereco.estado || ''}</small>`, {
+          const fonteIcon = e.fonte === 'Google' ? '<i class="fa-brands fa-google" style="color:#ea4335;"></i>' : '<i class="fa-solid fa-cloud" style="color:#0086ff;"></i>';
+          marker.bindTooltip(`<strong>${fonteIcon} ${e.nome}</strong><br><small style="color:#64748b">${e.endereco.cidade || ''} - ${e.endereco.estado || ''}</small>`, {
             direction: 'top',
             offset: [0, -26]
           });
@@ -1742,10 +1781,8 @@
       const vpCountEl = document.getElementById('vpCount');
       const syncWithBounds = document.getElementById('chkSyncMapBounds').checked;
 
-      // Obtém os limites visíveis da tela do mapa
       const mapBounds = map ? map.getBounds() : null;
 
-      // Filtra por limites visíveis do mapa se a opção estiver ativada
       let visibleList = filteredEmpresas;
       if (syncWithBounds && mapBounds) {
         visibleList = filteredEmpresas.filter(e => {
@@ -1756,7 +1793,6 @@
         });
       }
 
-      // Atualiza os contadores
       counterTextEl.innerText = `${visibleList.length.toLocaleString('pt-BR')} empresas nesta área`;
       vpCountEl.innerText = visibleList.length.toLocaleString('pt-BR');
 
@@ -1780,6 +1816,10 @@
           '<span class="badge badge-gps"><i class="fa-solid fa-location-dot"></i> No Mapa</span>' : 
           '<span class="badge badge-no-gps"><i class="fa-solid fa-location-slash"></i> Sem GPS</span>';
         
+        const fonteBadge = e.fonte === 'Google' ?
+          '<span class="badge badge-fonte-google"><i class="fa-brands fa-google"></i> Google</span>' :
+          '<span class="badge badge-fonte-agendor"><i class="fa-solid fa-cloud"></i> Agendor</span>';
+
         const editedBadge = e.is_edited ? '<span class="badge badge-edited"><i class="fa-solid fa-pen"></i> Editada</span>' : '';
         const tel = e.contato.celular || e.contato.telefone || '';
         const cid = e.endereco.cidade ? `${e.endereco.cidade}/${e.endereco.estado}` : (e.endereco.estado || '');
@@ -1791,6 +1831,7 @@
               ${gpsBadge}
             </div>
             <div class="card-badges">
+              ${fonteBadge}
               ${editedBadge}
               ${e.setor ? `<span class="badge badge-primary">${e.setor}</span>` : ''}
               ${e.categoria ? `<span class="badge badge-secondary">${e.categoria}</span>` : ''}
@@ -1862,9 +1903,16 @@
       document.getElementById('d_fantasia').innerText = emp.nome_fantasia || '-';
       document.getElementById('d_razao').innerText = emp.razao_social || '-';
       document.getElementById('d_cnpj').innerText = emp.cnpj || '-';
+      
+      const fonteBadgeHtml = emp.fonte === 'Google' ?
+        '<span class="badge badge-fonte-google"><i class="fa-brands fa-google"></i> Google (Prospecção)</span>' :
+        '<span class="badge badge-fonte-agendor"><i class="fa-solid fa-cloud"></i> Agendor (Base)</span>';
+      document.getElementById('d_fonte').innerHTML = fonteBadgeHtml;
+
       document.getElementById('d_responsavel').innerText = emp.responsavel || '-';
       document.getElementById('d_setor').innerText = emp.setor || '-';
       document.getElementById('d_categoria').innerText = emp.categoria || '-';
+      document.getElementById('d_dt_cad').innerText = emp.data_cadastro || '-';
       
       const webEl = document.getElementById('d_website');
       if (emp.website) {
@@ -2037,6 +2085,7 @@
       document.getElementById('edit_nome_fantasia').value = emp.nome_fantasia || emp.nome || '';
       document.getElementById('edit_razao_social').value = emp.razao_social || '';
       document.getElementById('edit_cnpj').value = emp.cnpj || '';
+      document.getElementById('edit_fonte').value = emp.fonte || 'Agendor';
       document.getElementById('edit_setor').value = emp.setor || '';
       document.getElementById('edit_categoria').value = emp.categoria || '';
       document.getElementById('edit_responsavel').value = emp.responsavel || '';
@@ -2128,6 +2177,7 @@
       const nomeFantasia = document.getElementById('edit_nome_fantasia').value.trim();
       const razaoSocial = document.getElementById('edit_razao_social').value.trim();
       const cnpj = document.getElementById('edit_cnpj').value.trim();
+      const fonte = document.getElementById('edit_fonte').value;
       const setor = document.getElementById('edit_setor').value.trim();
       const categoria = document.getElementById('edit_categoria').value.trim();
       const responsavel = document.getElementById('edit_responsavel').value.trim();
@@ -2161,6 +2211,7 @@
       emp.nome_fantasia = nomeFantasia;
       emp.razao_social = razaoSocial;
       emp.cnpj = cnpj;
+      emp.fonte = fonte;
       emp.setor = setor;
       emp.categoria = categoria;
       emp.responsavel = responsavel;
